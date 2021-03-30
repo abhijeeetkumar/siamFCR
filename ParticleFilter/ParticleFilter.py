@@ -3,6 +3,7 @@ import glob
 import numpy as np
 from utils import *
 import os
+import pdb
 
 class state():
     def __init__(self,x,y,x_dot,y_dot,h_x,h_y,a_dot):
@@ -26,8 +27,8 @@ class state():
 
 
 class hist():
-    def __init__(self,num=8,max_range=360.):  #HSV颜色空间，色调H（0-360度），饱和度S（0%-100%），明度V（0%-100%），在opencv中，H范围0-180，S范围0-255，V范围0-255
-        self.num=num                          #直方图编号为0-7
+    def __init__(self,num=8,max_range=360.):  
+        self.num=num                          
         self.max_range=max_range
         self.divide=[max_range/num*i for i in range(num)]
         self.height=np.array([0. for i in range(num)])
@@ -37,6 +38,8 @@ class hist():
             if x>=self.divide[i] and x<self.divide[i+1]:
                 return i
             elif x>self.divide[-1] and x<=self.max_range:
+                return self.num-1
+            else:
                 return self.num-1
 
     def update(self,i):
@@ -53,17 +56,17 @@ class ParticleFilter():
         self.SCALE_CHANGE_D=0.001
         self.img_index=0
         #self.imgs=glob.glob(os.path.join(img_path,'*.jpg'))
-        self.imgs=[os.path.join(img_path,'%04d.jpg'%(i+1)) for i in range(1350)]
+        self.imgs=[os.path.join(img_path,'%08d.jpg'%(i+1)) for i in range(139)]
         print(self.imgs[0])
-        print('processing image: %04d.jpg' % (self.img_index + 1))
+        print('processing image: %08d.jpg' % (self.img_index + 1))
         img_first = cv.imread(self.imgs[0])
-        initial_state=state(x=165,y=150,x_dot=0.,y_dot=0.,h_x=25,h_y=40,a_dot=0.)  #x是横向的，y是纵向的，h_x与h_y分别是长方形边长的一半长度
+        initial_state=state(x=65,y=10,x_dot=0.,y_dot=0.,h_x=25,h_y=40,a_dot=0.)  
         initial_state.draw_dot(img_first,self.out_path+'/0001.jpg')
         initial_state.draw_rectangle(img_first, self.out_path+'/0001.jpg')
         self.state=initial_state
         self.particles=[]
-        random_nums=np.random.normal(0,0.4,(particles_num,7))   #一个state有7个变量
-        self.weights = [1. / particles_num] * particles_num  # 初始情况下的particle具有相同的weight
+        random_nums=np.random.normal(0,0.4,(particles_num,7)) 
+        self.weights = [1. / particles_num] * particles_num  
         for i in range(particles_num):
             x0 = int(initial_state.x + random_nums.item(i, 0) * initial_state.h_x)
             y0 = int(initial_state.y + random_nums.item(i, 1) * initial_state.h_y)
@@ -90,6 +93,7 @@ class ParticleFilter():
                         temp = k(np.linalg.norm((j - initial_state.y, i - initial_state.x)) / a)
                         f += temp
                         weight.append(temp)
+                        #pdb.set_trace()
                         x_bin.append(k_delta(hist_c.get_hist_id(float(x_val)) - u))
                 hist_c.height[u] = np.sum(np.array(weight) * np.array(x_bin))/f
     def select(self):
