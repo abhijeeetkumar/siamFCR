@@ -3,21 +3,26 @@ import sys
 import torch
 from torch.utils.data import DataLoader
 
-from got10k.datasets import ImageNetVID, GOT10k
+from got10k.datasets import ImageNetVID, GOT10k, VOT
 from pairwise import Pairwise
 from siamfc import TrackerSiamFC
 
 if __name__ == '__main__':
     # setup dataset
-    name = 'GOT-10k'
-    assert name in ['VID', 'GOT-10k']
+    name = 'VOT'
+    assert name in ['VID', 'GOT-10k', 'VOT']
     if name == 'GOT-10k':
         root_dir = 'data/GOT-10k'
         seq_dataset = GOT10k(root_dir, subset='train')
     elif name == 'VID':
         root_dir = 'data/ILSVRC'
         seq_dataset = ImageNetVID(root_dir, subset=('train', 'val'))
+    elif name == 'VOT':
+        root_dir = 'dataset/data/vot2018/'
+        seq_dataset = VOT(root_dir)
+        print('VOT loaded')
     pair_dataset = Pairwise(seq_dataset)
+    print('pairwise x and z done')
 
 #setup data loader
 cuda = torch.cuda.is_available()
