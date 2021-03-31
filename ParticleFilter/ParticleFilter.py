@@ -14,7 +14,7 @@ class state():
         self.h_x=h_x
         self.h_y=h_y
         self.a_dot=a_dot
-    def draw_dot(self,img,path):    #将当前状态画到一张图上并保存
+    def draw_dot(self,img,path):
         cv.circle(img, center=(self.x, self.y), radius=1, color=(0, 0, 255), thickness=4)
         self.img=img
         cv.imwrite(path, self.img)
@@ -60,7 +60,7 @@ class ParticleFilter():
         print(self.imgs[0])
         print('processing image: %08d.jpg' % (self.img_index + 1))
         img_first = cv.imread(self.imgs[0])
-        initial_state=state(x=65,y=10,x_dot=0.,y_dot=0.,h_x=25,h_y=40,a_dot=0.)  
+        initial_state=state(x=65,y=10,x_dot=0.,y_dot=0.,h_x=25,h_y=40,a_dot=0.) ##hardcoding here 
         initial_state.draw_dot(img_first,self.out_path+'/0001.jpg')
         initial_state.draw_rectangle(img_first, self.out_path+'/0001.jpg')
         self.state=initial_state

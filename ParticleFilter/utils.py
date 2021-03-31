@@ -16,7 +16,7 @@ def B_coefficient(a,b):
     return np.sum(np.sqrt(a*b))
 
 def get_weight(B):
-    sigma=0.02 #更新权重的时候所用的标准差
+    sigma=0.02 
     #return 1./(np.sqrt(2*np.pi)*sigma)*np.exp(-(1-B)/(2*sigma**2))
     return np.exp(-(1.-B)/sigma)
 
