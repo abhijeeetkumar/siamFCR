@@ -20,9 +20,7 @@ if __name__ == '__main__':
     elif name == 'VOT':
         root_dir = 'dataset/data/vot2018/'
         seq_dataset = VOT(root_dir)
-        print('VOT loaded')
     pair_dataset = Pairwise(seq_dataset)
-    print('pairwise x and z done')
 
 #setup data loader
 cuda = torch.cuda.is_available()
@@ -32,6 +30,7 @@ loader = DataLoader(
 
 #setup tracker
 tracker = TrackerSiamFC()
+print('tracker created')
 
 #path for saving checkpoints
 net_dir = 'network/siamfc'  #siamFCR

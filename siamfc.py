@@ -75,6 +75,7 @@ class TrackerSiamFC(Tracker):
         # setup GPU device if available
         self.cuda = torch.cuda.is_available()
         self.device = torch.device('cuda:0' if self.cuda else 'cpu')
+        print(self.device)
 
         # setup model
         self.net = SiamFC()

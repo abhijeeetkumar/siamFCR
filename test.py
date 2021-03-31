@@ -9,8 +9,8 @@ if __name__ == '__main__':
     # setup experiments
     experiments = [
         #ExperimentGOT10k('data/GOT-10k', subset='test'),
-        ExperimentOTB('data/OTB', version=2013),
-        ExperimentOTB('data/OTB', version=2015),
+        #ExperimentOTB('data/OTB', version=2013),
+        #ExperimentOTB('data/OTB', version=2015),
         ExperimentVOT('data/vot2018', version=2018),
         #ExperimentDTB70('data/DTB70'),
         #ExperimentTColor128('data/Temple-color-128'),
