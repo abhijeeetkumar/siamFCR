@@ -60,9 +60,14 @@ class ParticleFilter():
         print(self.imgs[0])
         print('processing image: %08d.jpg' % (self.img_index + 1))
         img_first = cv.imread(self.imgs[0])
-        initial_state=state(x=65,y=10,x_dot=0.,y_dot=0.,h_x=25,h_y=40,a_dot=0.) ##hardcoding here 
+        initial_state=state(x=288,y=143,x_dot=0.,y_dot=0.,h_x=35,h_y=42,a_dot=0.) ##hardcoding here 
         initial_state.draw_dot(img_first,self.out_path+'/0001.jpg')
         initial_state.draw_rectangle(img_first, self.out_path+'/0001.jpg')
+        import matplotlib.pyplot as plt
+        import matplotlib.image as mpimg
+        img = mpimg.imread(self.out_path+'/0001.jpg')
+        imgplot = plt.imshow(img)
+        plt.show()
         self.state=initial_state
         self.particles=[]
         random_nums=np.random.normal(0,0.4,(particles_num,7)) 

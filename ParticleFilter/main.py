@@ -1,28 +1,33 @@
 from ParticleFilter import ParticleFilter
 from got10k.experiments import *
+import glob
+import numpy as np
 
 def main():
     #Parameters/Experiment
     particles_num = 40
     experiments = [
-        #ExperimentGOT10k('data/GOT-10k', subset='test'),
-        #ExperimentOTB('data/OTB', version=2013),
-        #ExperimentOTB('data/OTB', version=2015),
-        ExperimentVOT('data/vot2018', version=2018),
-        #ExperimentDTB70('data/DTB70'),
-        #ExperimentTColor128('data/Temple-color-128'),
-        #ExperimentUAV123('data/UAV123', version='UAV123'),
-        #ExperimentUAV123('data/UAV123', version='UAV20L'),
-        #ExperimentNfS('data/nfs', fps=30),
-        #ExperimentNfS('data/nfs', fps=240)
+        ExperimentVOT('data/OTB_2013', version=2013),
     ]
     #Init
-    img_path = r'./data/vot2018/crossing/'
+    img_path = r'./data/OTB/boy/'
     out_path = r'./output'
-    PF=ParticleFilter(particles_num,img_path,out_path)
-    print(PF.imgs)
     #Exec
-    while PF.img_index<len(PF.imgs):
+    run_particle_filter(particles_num,img_path,out_path)
+
+def run_particle_filter(particles_num,img_path,out_path):
+  PF=ParticleFilter(particles_num,img_path,out_path)  #Pass Init state
+  num_img = sorted(glob.glob(img_path + '*.jpg'))
+  print(" PF Img " + str(len(PF.imgs)))
+  print(" Actual Img " + str(len(num_img)))
+  anno = np.loadtxt(img_path + 'groundtruth.txt', delimiter=',', usecols=range(8))
+  x_0  = np.loadtxt(anno[0], delimiter=' ', usecols=range(4))
+  print(anno[0])
+  init = str(anno[0])
+  init = init[0].split(" ")
+  print(init)  
+  print(PF.state.output)
+  while PF.img_index>len(PF.imgs):
         PF.select()
         PF.propagate()
         PF.observe()
