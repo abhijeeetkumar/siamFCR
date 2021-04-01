@@ -5,10 +5,83 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 import cv2
+import time
 from collections import namedtuple
 from torch.optim.lr_scheduler import ExponentialLR
 
 from got10k.trackers import Tracker
+
+def read_image(img_file, cvt_code=cv2.COLOR_BGR2RGB):
+    img = cv2.imread(img_file, cv2.IMREAD_COLOR)
+    if cvt_code is not None:
+        img = cv2.cvtColor(img, cvt_code)
+    return img
+
+def show_image(img, boxes=None, box_fmt='ltwh', colors=None,
+               thickness=3, fig_n=1, delay=1, visualize=True,
+               cvt_code=cv2.COLOR_RGB2BGR):
+    if cvt_code is not None:
+        img = cv2.cvtColor(img, cvt_code)
+
+    # resize img if necessary
+    max_size = 960
+    if max(img.shape[:2]) > max_size:
+        scale = max_size / max(img.shape[:2])
+        out_size = (
+            int(img.shape[1] * scale),
+            int(img.shape[0] * scale))
+        img = cv2.resize(img, out_size)
+        if boxes is not None:
+            boxes = np.array(boxes, dtype=np.float32) * scale
+
+    if boxes is not None:
+        assert box_fmt in ['ltwh', 'ltrb']
+        boxes = np.array(boxes, dtype=np.int32)
+        if boxes.ndim == 1:
+            boxes = np.expand_dims(boxes, axis=0)
+        if box_fmt == 'ltrb':
+            boxes[:, 2:] -= boxes[:, :2]
+
+        # clip bounding boxes
+        bound = np.array(img.shape[1::-1])[None, :]
+        boxes[:, :2] = np.clip(boxes[:, :2], 0, bound)
+        boxes[:, 2:] = np.clip(boxes[:, 2:], 0, bound - boxes[:, :2])
+
+        if colors is None:
+            colors = [
+                (0, 0, 255),
+                (0, 255, 0),
+                (255, 0, 0),
+                (0, 255, 255),
+                (255, 0, 255),
+                (255, 255, 0),
+                (0, 0, 128),
+                (0, 128, 0),
+                (128, 0, 0),
+                (0, 128, 128),
+                (128, 0, 128),
+                (128, 128, 0)]
+        colors = np.array(colors, dtype=np.int32)
+        if colors.ndim == 1:
+            colors = np.expand_dims(colors, axis=0)
+        
+        for i, box in enumerate(boxes):
+            color = colors[i % len(colors)]
+            pt1 = (box[0], box[1])
+            pt2 = (box[0] + box[2], box[1] + box[3])
+
+            ##############################################
+
+            ###############################################
+            # img = cv2.rectangle(img, pt1, pt2, (0, 255, 0), thickness)
+            img = cv2.rectangle(img, pt1, pt2, color.tolist(), thickness)
+    
+    if visualize:
+        winname = 'window_{}'.format(fig_n)
+        cv2.imshow(winname, img)
+        cv2.waitKey(delay)
+
+    return img
 
 
 class SiamFC(nn.Module):
@@ -320,3 +393,24 @@ class TrackerSiamFC(Tracker):
         self.weights = torch.from_numpy(weights).to(self.device).float()
 
         return self.labels, self.weights
+
+    def track(self, img_files, box, visualize=False):
+        frame_num = len(img_files)
+        boxes = np.zeros((frame_num, 4))
+        boxes[0] = box
+        times = np.zeros(frame_num)
+
+        for f, img_file in enumerate(img_files):
+            img = read_image(img_file)
+
+            begin = time.time()
+            if f == 0:
+                self.init(img, box)
+            else:
+                boxes[f, :] = self.update(img, f)
+            times[f] = time.time() - begin
+            # print(boxes[f, :])
+            if visualize:
+                show_image(img, boxes[f, :])
+
+        return boxes, times
