@@ -36,14 +36,14 @@ class DCFNet(nn.Module):
 
     def forward(self, x):
         x = self.feature(x) * self.config.cos_window.cuda()
-        xf = torch.rfft(x, signal_ndim=2)
+        xf = torch.fft.rfft(x, dim=2)
         kxzf = torch.sum(complex_mulconj(xf, self.model_zf), dim=1, keepdim=True)
-        response = torch.irfft(complex_mul(kxzf, self.model_alphaf), signal_ndim=2)
+        response = torch.fft.irfft(complex_mul(kxzf, self.model_alphaf), dim=2)
         return response
 
     def update(self, z, lr=1.):
         z = self.feature(z) * self.config.cos_window.cuda()
-        zf = torch.rfft(z, signal_ndim=2).cuda()
+        zf = torch.fft.rfft(z, dim=2).cuda()
         kzzf = torch.sum(torch.sum(zf ** 2, dim=4, keepdim=True), dim=1, keepdim=True).cuda()
         alphaf = self.config.yf.cuda() / (kzzf + self.config.lambda0)
         if lr > 0.99:
@@ -90,5 +90,5 @@ class CFConfig(object):
     net_average_image = np.array([104, 117, 123]).reshape(-1, 1, 1).astype(np.float32)
     output_sigma = crop_sz / (1 + padding) * output_sigma_factor
     y = gaussian_shaped_labels(output_sigma, net_input_size)
-    yf = torch.rfft(torch.Tensor(y).view(1, 1, crop_sz, crop_sz), signal_ndim=2)
+    yf = torch.fft.rfft(torch.Tensor(y).view(1, 1, crop_sz, crop_sz), dim=2)
     cos_window = torch.Tensor(np.outer(np.hanning(crop_sz), np.hanning(crop_sz)))
