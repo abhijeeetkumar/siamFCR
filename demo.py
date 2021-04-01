@@ -11,4 +11,4 @@ if __name__ == '__main__':
 
    net_path = 'network/siamfc_pretrained/model.pth'
    tracker = TrackerSiamFC(netpath=net_path)
-   tracker.track(img_files, anno[0], visualize=True)
+   tracker.track(img_files, anno[0], visualize=False)

@@ -407,9 +407,9 @@ class TrackerSiamFC(Tracker):
             if f == 0:
                 self.init(img, box)
             else:
-                boxes[f, :] = self.update(img, f)
+                boxes[f, :] = self.update(img)
             times[f] = time.time() - begin
-            # print(boxes[f, :])
+            print(boxes[f, :])
             if visualize:
                 show_image(img, boxes[f, :])
 

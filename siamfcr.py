@@ -306,8 +306,8 @@ class SiamFCRTracker(Tracker):
             method = 0
         else:
            #Use Particle to modify the center of siamFC
-            x_PF_new = self.PF_part*x_kalman+ (1 - self.PF_part)*x_siamFC
-            y_PF_new = self.PF_part*y_kalman+ (1 - self.PF_part)*y_siamFC
+            x_PF_new = self.PF_part*x_PF+ (1 - self.PF_part)*x_siamFC
+            y_PF_new = self.PF_part*y_PF+ (1 - self.PF_part)*y_siamFC
            #CF to mo justify the result and modify which is wrong
             A, B = self.CF_update_predict(img)
             x_dcf = int(A[0] - B[0] / 2)
