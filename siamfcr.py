@@ -93,7 +93,7 @@ def show_image(img, boxes=None, box_fmt='ltwh', colors=None,
 class SiamFCRTracker(Tracker):
     def __init__(self, net_path=None, **kargs):
         super().__init__(
-            name='SiamFC', is_deterministic=True)
+            name='SiamFCR', is_deterministic=True)
         self.cfg = self.parse_args(**kargs)
 
         # setup GPU device if available
@@ -299,12 +299,13 @@ class SiamFCRTracker(Tracker):
             PF_state.y,
             PF_state.h_y, PF_state.h_x])
         ious_FC_PF = self.rect_iou(box1.T, box2.T)            
-        if (ious_FC_PF >= self.theta):
+        if ((True) or ious_FC_PF >= self.theta):
             # Using Orignal FC
             x_final = x_siamFC
             y_final = y_siamFC
             self.CF_update_predict(image)
             method = 0
+            print("0")
         else:
            #Use Particle to modify the center of siamFC
             x_PF_new = self.PF_part*PF_state.x + (1 - self.PF_part)*x_siamFC
@@ -321,23 +322,23 @@ class SiamFCRTracker(Tracker):
                     x_final = x_siamFC
                     y_final = y_siamFC
                     method = 0
-                    # print("2")
+                    print("1")
                 else:
                     x_final = x_dcf
                     y_final = y_dcf
                     method = 1
-                    # print("1")
+                    print("2")
             else:
                 if iou_dcf_PF > self.beta2:
-                    x_final = x_PF_new
-                    y_final = y_PF_new
-                    method = 1
-                    # print("3")
-                else:
                     x_final = x_dcf
                     y_final = y_dcf
+                    method = 1
+                    print("3")
+                else:
+                    x_final = x_PF_new
+                    y_final = y_PF_new
                     method = 2
-                    # print("4")
+                    print("4") 
     #############################################################################
         # return the box come back to self.center and update the data
         self.center[1] = x_final - 1 + (self.target_sz[1] - 1) / 2
@@ -351,7 +352,7 @@ class SiamFCRTracker(Tracker):
                 self.target_sz[1], self.target_sz[0]])
 
         centers = np.array([[x_final], [y_final]])
-
+        print(box_final) 
         return box_final
 #############################################################################################################
     ## Using for CF update predict

@@ -4,6 +4,7 @@ import numpy as np
 from .utils import *
 import os
 import pdb
+import math
 
 class state():
     def __init__(self,x,y,x_dot,y_dot,h_x,h_y,a_dot):
@@ -83,8 +84,8 @@ class ParticleFilter():
                 f = 0
                 weight = []
                 x_bin = []
-                for i in range(int(initial_state.x - initial_state.h_x), int(initial_state.x + initial_state.h_x)):
-                    for j in range(int(initial_state.y - initial_state.h_y), int(initial_state.y + initial_state.h_y)):
+                for i in range(math.floor(initial_state.x - initial_state.h_x), math.floor(initial_state.x + initial_state.h_x)):
+                    for j in range(math.floor(initial_state.y - initial_state.h_y), math.floor(initial_state.y + initial_state.h_y)):
                         x_val = img_first[j][i][self.q.index(hist_c)]
                         temp = k(np.linalg.norm((j - initial_state.y, i - initial_state.x)) / a)
                         f += temp
@@ -147,8 +148,8 @@ class ParticleFilter():
         for i in range(self.particles_num):
             self.weights[i]=get_weight(B[i])
         self.weights/=sum(self.weights)
-        for i in range(self.particles_num):
-            print('dot: (%d,%d)  weight: %s'%(self.particles[i].x,self.particles[i].y,self.weights[i]))
+        #for i in range(self.particles_num):
+            #print('dot: (%d,%d)  weight: %s'%(self.particles[i].x,self.particles[i].y,self.weights[i]))
 
     def estimate(self):
         self.state.x = np.sum(np.array([s.x for s in self.particles])*self.weights).astype(int)
@@ -158,7 +159,7 @@ class ParticleFilter():
         self.state.x_dot = np.sum(np.array([s.x_dot for s in self.particles])*self.weights)
         self.state.y_dot = np.sum(np.array([s.y_dot for s in self.particles])*self.weights)
         self.state.a_dot = np.sum(np.array([s.a_dot for s in self.particles])*self.weights)
-        print('img: x: %s  y: %s  h_x: %s  h_y: %s  x_dot: %s  y_dot: %s  a_dot: %s'%(self.state.x,self.state.y,self.state.h_x,self.state.h_y,self.state.x_dot,self.state.y_dot,self.state.a_dot))
+        #print('img: x: %s  y: %s  h_x: %s  h_y: %s  x_dot: %s  y_dot: %s  a_dot: %s'%(self.state.x,self.state.y,self.state.h_x,self.state.h_y,self.state.x_dot,self.state.y_dot,self.state.a_dot))
 
     def update_predict(self, image):
         self.select()
