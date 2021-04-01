@@ -63,7 +63,7 @@ class ParticleFilter():
         self.state = initial_state
         random_nums=np.random.normal(0,0.4,(self.particles_num,7)) 
 
-        for i in range(particles_num):
+        for i in range(self.particles_num):
             x0 = int(initial_state.x + random_nums.item(i, 0) * initial_state.h_x)
             y0 = int(initial_state.y + random_nums.item(i, 1) * initial_state.h_y)
             x_dot0 = initial_state.x_dot + random_nums.item(i, 2) * self.VELOCITY_DISTURB
@@ -74,7 +74,7 @@ class ParticleFilter():
             particle = state(x0, y0, x_dot0, y_dot0, h_x0, h_y0, a_dot0)
             self.particles.append(particle)
 
-        img_first = cv.imread(image)
+        img_first = image
         img_first = cv.cvtColor(img_first, cv.COLOR_BGR2HSV)
 
         for hist_c in self.q:
@@ -83,8 +83,8 @@ class ParticleFilter():
                 f = 0
                 weight = []
                 x_bin = []
-                for i in range(initial_state.x - initial_state.h_x, initial_state.x + initial_state.h_x):
-                    for j in range(initial_state.y - initial_state.h_y, initial_state.y + initial_state.h_y):
+                for i in range(int(initial_state.x - initial_state.h_x), int(initial_state.x + initial_state.h_x)):
+                    for j in range(int(initial_state.y - initial_state.h_y), int(initial_state.y + initial_state.h_y)):
                         x_val = img_first[j][i][self.q.index(hist_c)]
                         temp = k(np.linalg.norm((j - initial_state.y, i - initial_state.x)) / a)
                         f += temp
@@ -112,7 +112,7 @@ class ParticleFilter():
             particle.a_dot = particle.a_dot+random_nums[6]*self.SCALE_CHANGE_D
 
     def observe(self, image):
-        img=cv.imread(image)
+        img=image
         img=cv.cvtColor(img , cv.COLOR_BGR2HSV)
         B=[]
         for i in range(self.particles_num):

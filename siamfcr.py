@@ -284,7 +284,7 @@ class SiamFCRTracker(Tracker):
        #combining PF and CF
 ##############################################################################
         x_siamFC = self.center[1] + 1 - (self.target_sz[1] - 1) / 2
-        x_siamFC = self.center[0] + 1 - (self.target_sz[0] - 1) / 2
+        y_siamFC = self.center[0] + 1 - (self.target_sz[0] - 1) / 2
         #Predict using PF
         PF_state = self.PF.update_predict(image)
         # Compare the IoU for different method
@@ -299,7 +299,7 @@ class SiamFCRTracker(Tracker):
             PF_state.y,
             PF_state.h_y, PF_state.h_x])
         ious_FC_PF = self.rect_iou(box1.T, box2.T)            
-        if (ious_FC_PF >= self.theta) | (f <= 15):
+        if (ious_FC_PF >= self.theta):
             # Using Orignal FC
             x_final = x_siamFC
             y_final = y_siamFC
@@ -307,8 +307,8 @@ class SiamFCRTracker(Tracker):
             method = 0
         else:
            #Use Particle to modify the center of siamFC
-            x_PF_new = self.PF_part*x_PF+ (1 - self.PF_part)*x_siamFC
-            y_PF_new = self.PF_part*y_PF+ (1 - self.PF_part)*y_siamFC
+            x_PF_new = self.PF_part*PF_state.x + (1 - self.PF_part)*x_siamFC
+            y_PF_new = self.PF_part*PF_state.y + (1 - self.PF_part)*y_siamFC
            #CF to mo justify the result and modify which is wrong
             A, B = self.CF_update_predict(image)
             x_dcf = int(A[0] - B[0] / 2)
@@ -405,7 +405,7 @@ class SiamFCRTracker(Tracker):
             if f == 0:
                 self.init(img, box)
             else:
-                boxes[f, :] = self.update(img, f)
+                boxes[f, :] = self.update(img)
             times[f] = time.time() - begin
             # print(boxes[f, :])
             if visualize:
