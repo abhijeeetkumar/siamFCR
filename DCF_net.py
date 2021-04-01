@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch  
 import numpy as np
-from .DCF_util import gaussian_shaped_labels
+from DCF_util import gaussian_shaped_labels
 
 def complex_mul(x, z):
     out_real = x[..., 0] * z[..., 0] - x[..., 1] * z[..., 1]

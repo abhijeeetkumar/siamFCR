@@ -1,7 +1,7 @@
 import cv2 as cv
 import glob
 import numpy as np
-from utils import *
+from .utils import *
 import os
 import pdb
 
@@ -47,26 +47,22 @@ class hist():
 
 
 class ParticleFilter():
-    def __init__(self,particles_num=50,img_path=r'./test-videos1/Dog1/img',out_path=r'./output'):
+    def __init__(self,particles_num=50):
         self.particles_num=particles_num
-        self.out_path=out_path
         self.DELTA_T=0.05
         self.VELOCITY_DISTURB=4.
         self.SCALE_DISTURB=0.0
         self.SCALE_CHANGE_D=0.001
-        self.img_index=0
-        #self.imgs=glob.glob(os.path.join(img_path,'*.jpg'))
-        self.imgs=[os.path.join(img_path,'%08d.jpg'%(i+1)) for i in range(139)]
-        print(self.imgs[0])
-        print('processing image: %08d.jpg' % (self.img_index + 1))
-        img_first = cv.imread(self.imgs[0])
-        initial_state=state(x=65,y=10,x_dot=0.,y_dot=0.,h_x=25,h_y=40,a_dot=0.) ##hardcoding here 
-        initial_state.draw_dot(img_first,self.out_path+'/0001.jpg')
-        initial_state.draw_rectangle(img_first, self.out_path+'/0001.jpg')
-        self.state=initial_state
+        self.initial_state=state(x=0,y=0,x_dot=0.,y_dot=0.,h_x=25,h_y=40,a_dot=0.) 
+        self.state=self.initial_state
         self.particles=[]
-        random_nums=np.random.normal(0,0.4,(particles_num,7)) 
         self.weights = [1. / particles_num] * particles_num  
+        self.q = [hist(num=2,max_range=180),hist(num=2,max_range=255),hist(num=10,max_range=255)]
+
+    def init(self, image, initial_state):
+        self.state = initial_state
+        random_nums=np.random.normal(0,0.4,(self.particles_num,7)) 
+
         for i in range(particles_num):
             x0 = int(initial_state.x + random_nums.item(i, 0) * initial_state.h_x)
             y0 = int(initial_state.y + random_nums.item(i, 1) * initial_state.h_y)
@@ -76,11 +72,11 @@ class ParticleFilter():
             h_y0 = int(initial_state.h_y + random_nums.item(i, 5) * self.SCALE_DISTURB)
             a_dot0 = initial_state.a_dot + random_nums.item(i, 6) * self.SCALE_CHANGE_D
             particle = state(x0, y0, x_dot0, y_dot0, h_x0, h_y0, a_dot0)
-            particle.draw_dot(img_first,self.out_path+'/0001.jpg')
             self.particles.append(particle)
-        self.q = [hist(num=2,max_range=180),hist(num=2,max_range=255),hist(num=10,max_range=255)]
-        img_first = cv.imread(self.imgs[0])
+
+        img_first = cv.imread(image)
         img_first = cv.cvtColor(img_first, cv.COLOR_BGR2HSV)
+
         for hist_c in self.q:
             for u in range(hist_c.num):
                 a = np.sqrt(initial_state.h_x**2+initial_state.h_y**2)
@@ -96,11 +92,8 @@ class ParticleFilter():
                         #pdb.set_trace()
                         x_bin.append(k_delta(hist_c.get_hist_id(float(x_val)) - u))
                 hist_c.height[u] = np.sum(np.array(weight) * np.array(x_bin))/f
+
     def select(self):
-        if self.img_index<len(self.imgs)-1:
-            self.img_index+=1
-        self.img = cv.imread(self.imgs[self.img_index])
-        print('processing image: %04d.jpg' % (self.img_index+1))
         index=get_random_index(self.weights)
         new_particles=[]
         for i in index:
@@ -117,14 +110,13 @@ class ParticleFilter():
             particle.h_x = int(particle.h_x*(particle.a_dot+1)+random_nums[4]*self.SCALE_DISTURB+0.5)
             particle.h_y = int(particle.h_y*(particle.a_dot+1)+random_nums[5]*self.SCALE_DISTURB+0.5)
             particle.a_dot = particle.a_dot+random_nums[6]*self.SCALE_CHANGE_D
-            particle.draw_dot(self.img, self.out_path+'/%04d.jpg'%(self.img_index+1))
 
-    def observe(self):
-        img=cv.imread(self.imgs[self.img_index])
+    def observe(self, image):
+        img=cv.imread(image)
         img=cv.cvtColor(img , cv.COLOR_BGR2HSV)
         B=[]
         for i in range(self.particles_num):
-            if self.particles[i].x<0 or self.particles[i].x>self.img.shape[1]-1 or self.particles[i].y<0 or self.particles[i].y>self.img.shape[0]-1:
+            if self.particles[i].x<0 or self.particles[i].x>image.shape[1]-1 or self.particles[i].y<0 or self.particles[i].y>image.shape[0]-1:
                 B.append(0)
                 continue
             self.p = [hist(num=2, max_range=180), hist(num=2, max_range=255), hist(num=10, max_range=255)]
@@ -136,12 +128,12 @@ class ParticleFilter():
                     x_bin = []
                     for m in range(self.particles[i].x - self.particles[i].h_x, self.particles[i].x + self.particles[i].h_x):
                         for n in range(self.particles[i].y - self.particles[i].h_y, self.particles[i].y + self.particles[i].h_y):
-                            if n>=self.img.shape[0]:
-                                n=img.shape[0]-1
+                            if n>=image.shape[0]:
+                                n=image.shape[0]-1
                             elif n<0:
                                 n=0
-                            if m>=self.img.shape[1]:
-                                m = img.shape[1] - 1
+                            if m>=image.shape[1]:
+                                m = image.shape[1] - 1
                             elif m<0:
                                 m=0
                             x_val = img[n][m][self.p.index(hist_c)]
@@ -166,7 +158,12 @@ class ParticleFilter():
         self.state.x_dot = np.sum(np.array([s.x_dot for s in self.particles])*self.weights)
         self.state.y_dot = np.sum(np.array([s.y_dot for s in self.particles])*self.weights)
         self.state.a_dot = np.sum(np.array([s.a_dot for s in self.particles])*self.weights)
-        print('img: %s  x: %s  y: %s  h_x: %s  h_y: %s  x_dot: %s  y_dot: %s  a_dot: %s'%(self.img_index+1,self.state.x,self.state.y,self.state.h_x,self.state.h_y,self.state.x_dot,self.state.y_dot,self.state.a_dot))
-        self.state.draw_rectangle(self.img,self.out_path+'/%04d.jpg'%(self.img_index+1))
+        print('img: x: %s  y: %s  h_x: %s  h_y: %s  x_dot: %s  y_dot: %s  a_dot: %s'%(self.state.x,self.state.y,self.state.h_x,self.state.h_y,self.state.x_dot,self.state.y_dot,self.state.a_dot))
 
+    def update_predict(self, image):
+        self.select()
+        self.propagate()
+        self.observe(image)
+        self.estimate()
 
+        return self.state

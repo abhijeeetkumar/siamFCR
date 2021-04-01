@@ -1,17 +1,18 @@
-mport torch
+import torch
 import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 import cv2
+import time
 from collections import namedtuple
 from torch.optim.lr_scheduler import ExponentialLR
 
 from got10k.trackers import Tracker
 
 from siamfc import SiamFC
-from ParticleFilter import ParticleFilter 
+from ParticleFilter.ParticleFilter import ParticleFilter, state 
 from DCF_net import DCFNet, CFConfig
 import argparse
 from DCF_util import crop_chw, rect1_2_cxy_wh, cxy_wh_2_bbox
@@ -119,8 +120,8 @@ class SiamFCRTracker(Tracker):
             self.optimizer, gamma=self.cfg.lr_decay)
 
 ######Particle filter######## 
-        self.particles_num = 40
-        self.PF = ParticleFilter(self.particles_num, data/OTB/boy, output)
+        self.particles_num = 50
+        self.PF = ParticleFilter(self.particles_num)
 ####Discrimitative hyperparameter######
         self.theta = 0.6
         self.beta1 = 0.25
@@ -158,6 +159,7 @@ class SiamFCRTracker(Tracker):
 
     def init(self, image, box):
         image = np.asarray(image)
+        box_1 = box
 
         # convert box to 0-indexed and center based [y, x, h, w]
         box = np.array([
@@ -202,7 +204,7 @@ class SiamFCRTracker(Tracker):
         ## initialization for Correlation Filter part
         DCFparser = argparse.ArgumentParser(description='Test DCFNet on OTB')
 
-        DCFparser.add_argument('--model', metavar='PATH', default= 'network/SiamFCR_pretrained/CF_param.pth')
+        DCFparser.add_argument('--model', metavar='PATH', default= 'network/siamFC_pretrained/CF_param.pth')
 
         DCFargs = DCFparser.parse_args()
 
@@ -213,15 +215,18 @@ class SiamFCRTracker(Tracker):
         self.target_pos_dcf, self.target_sz_dcf = rect1_2_cxy_wh(box_1)
         window_sz_dcf = self.target_sz_dcf * (1 + self.config_dcf.padding)
         bbox_dcf = cxy_wh_2_bbox(self.target_pos_dcf, window_sz_dcf)
-        patch_dcf = crop_chw(img, bbox_dcf, self.config_dcf.crop_sz)
+        patch_dcf = crop_chw(image, bbox_dcf, self.config_dcf.crop_sz)
 
         self.min_sz_dcf = np.maximum(self.config_dcf.min_scale_factor * self.target_sz_dcf, 4)
-        self.max_sz_dcf = np.minimum(img.shape[:2], self.config_dcf.max_scale_factor * self.target_sz_dcf)
+        self.max_sz_dcf = np.minimum(image.shape[:2], self.config_dcf.max_scale_factor * self.target_sz_dcf)
 
         target_dcf = patch_dcf - self.config_dcf.net_average_image
         self.DCFnet.update(torch.Tensor(np.expand_dims(target_dcf, axis=0)).to(self.device))
 
         self.patch_crop_dcf = np.zeros((self.config_dcf.num_scale, patch_dcf.shape[0], patch_dcf.shape[1], patch_dcf.shape[2]), np.float32)
+        ######################################################################
+        initial_state = state(x=box[0],y=box[1],x_dot=0.,y_dot=0.,h_x=box[2]/2.,h_y=box[3]/2.,a_dot=0.)
+        self.PF.init(image, initial_state) 
         ######################################################################
 
     def update(self, image):
@@ -278,15 +283,11 @@ class SiamFCRTracker(Tracker):
 ##############################################################################
        #combining PF and CF
 ##############################################################################
-            x_siamFC = self.center[1] + 1 - (self.target_sz[1] - 1) / 2
-            x_siamFC = self.center[0] + 1 - (self.target_sz[0] - 1) / 2
+        x_siamFC = self.center[1] + 1 - (self.target_sz[1] - 1) / 2
+        x_siamFC = self.center[0] + 1 - (self.target_sz[0] - 1) / 2
         #Predict using PF
-
-
-
-
-             x_PF, y_PF
-       # Compare the IoU for different method
+        PF_state = self.PF.update_predict(image)
+        # Compare the IoU for different method
         # box1 for FC
         box1 = np.array([
             x_siamFC,
@@ -294,22 +295,22 @@ class SiamFCRTracker(Tracker):
             self.target_sz[1], self.target_sz[0]])
         # box2 for FC with PF
         box2 = np.array([
-            x_PF,
-            y_PF,
-            self.target_sz[1], self.target_sz[0]])
+            PF_state.x,
+            PF_state.y,
+            PF_state.h_y, PF_state.h_x])
         ious_FC_PF = self.rect_iou(box1.T, box2.T)            
         if (ious_FC_PF >= self.theta) | (f <= 15):
             # Using Orignal FC
             x_final = x_siamFC
             y_final = y_siamFC
-            self.CF_update_predict(img)
+            self.CF_update_predict(image)
             method = 0
         else:
            #Use Particle to modify the center of siamFC
             x_PF_new = self.PF_part*x_PF+ (1 - self.PF_part)*x_siamFC
             y_PF_new = self.PF_part*y_PF+ (1 - self.PF_part)*y_siamFC
            #CF to mo justify the result and modify which is wrong
-            A, B = self.CF_update_predict(img)
+            A, B = self.CF_update_predict(image)
             x_dcf = int(A[0] - B[0] / 2)
             y_dcf = int(A[1] - B[1] / 2)
             box_dcf = np.array([x_dcf, y_dcf, int(B[0]), int(B[1])])
@@ -350,7 +351,6 @@ class SiamFCRTracker(Tracker):
                 self.target_sz[1], self.target_sz[0]])
 
         centers = np.array([[x_final], [y_final]])
-        self.PF.update(centers)
 
         return box_final
 #############################################################################################################
