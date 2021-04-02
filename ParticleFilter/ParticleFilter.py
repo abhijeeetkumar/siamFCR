@@ -4,6 +4,9 @@ import numpy as np
 from utils import *
 import os
 import pdb
+import cProfile, pstats, io
+from pstats import SortKey
+
 
 class state():
     def __init__(self,x,y,x_dot,y_dot,h_x,h_y,a_dot):
@@ -54,20 +57,20 @@ class ParticleFilter():
         self.VELOCITY_DISTURB=4.
         self.SCALE_DISTURB=0.0
         self.SCALE_CHANGE_D=0.001
-        self.img_index=0
+        self.img_index=1
         #self.imgs=glob.glob(os.path.join(img_path,'*.jpg'))
-        self.imgs=[os.path.join(img_path,'%08d.jpg'%(i+1)) for i in range(139)]
+        self.imgs=[os.path.join(img_path,'%04d.jpg'%(i+1)) for i in range(602)]
         print(self.imgs[0])
-        print('processing image: %08d.jpg' % (self.img_index + 1))
+        print('processing image: %04d.jpg' % (self.img_index))
         img_first = cv.imread(self.imgs[0])
         initial_state=state(x=288,y=143,x_dot=0.,y_dot=0.,h_x=35,h_y=42,a_dot=0.) ##hardcoding here 
         initial_state.draw_dot(img_first,self.out_path+'/0001.jpg')
         initial_state.draw_rectangle(img_first, self.out_path+'/0001.jpg')
-        import matplotlib.pyplot as plt
-        import matplotlib.image as mpimg
-        img = mpimg.imread(self.out_path+'/0001.jpg')
-        imgplot = plt.imshow(img)
-        plt.show()
+        #import matplotlib.pyplot as plt
+        #import matplotlib.image as mpimg
+        #img = mpimg.imread(self.out_path+'/0001.jpg')
+        #imgplot = plt.imshow(img)
+        #plt.show()
         self.state=initial_state
         self.particles=[]
         random_nums=np.random.normal(0,0.4,(particles_num,7)) 
@@ -102,10 +105,11 @@ class ParticleFilter():
                         x_bin.append(k_delta(hist_c.get_hist_id(float(x_val)) - u))
                 hist_c.height[u] = np.sum(np.array(weight) * np.array(x_bin))/f
     def select(self):
-        if self.img_index<len(self.imgs)-1:
+        if self.img_index<len(self.imgs):
             self.img_index+=1
-        self.img = cv.imread(self.imgs[self.img_index])
-        print('processing image: %04d.jpg' % (self.img_index+1))
+            print('self.img_index: '+str(self.img_index))
+        self.img = cv.imread(self.imgs[self.img_index-1])
+        print('update processing image: %04d.jpg' % (self.img_index))
         index=get_random_index(self.weights)
         new_particles=[]
         for i in index:
@@ -122,10 +126,12 @@ class ParticleFilter():
             particle.h_x = int(particle.h_x*(particle.a_dot+1)+random_nums[4]*self.SCALE_DISTURB+0.5)
             particle.h_y = int(particle.h_y*(particle.a_dot+1)+random_nums[5]*self.SCALE_DISTURB+0.5)
             particle.a_dot = particle.a_dot+random_nums[6]*self.SCALE_CHANGE_D
-            particle.draw_dot(self.img, self.out_path+'/%04d.jpg'%(self.img_index+1))
+            particle.draw_dot(self.img, self.out_path+'/%04d.jpg'%(self.img_index))
 
     def observe(self):
-        img=cv.imread(self.imgs[self.img_index])
+        #pr = cProfile.Profile()
+        #pr.enable()
+        img=cv.imread(self.imgs[self.img_index-1])
         img=cv.cvtColor(img , cv.COLOR_BGR2HSV)
         B=[]
         for i in range(self.particles_num):
@@ -150,7 +156,7 @@ class ParticleFilter():
                             elif m<0:
                                 m=0
                             x_val = img[n][m][self.p.index(hist_c)]
-                            temp = k(np.linalg.norm((m - self.particles[i].x, n - self.particles[i].y)) / a)
+                            temp = 1 #k(np.linalg.norm((m - self.particles[i].x, n - self.particles[i].y)) / a)
                             f += temp
                             x_bin.append(k_delta(hist_c.get_hist_id(x_val) - u))
                             weight.append(temp)
@@ -160,8 +166,14 @@ class ParticleFilter():
         for i in range(self.particles_num):
             self.weights[i]=get_weight(B[i])
         self.weights/=sum(self.weights)
-        for i in range(self.particles_num):
-            print('dot: (%d,%d)  weight: %s'%(self.particles[i].x,self.particles[i].y,self.weights[i]))
+        #for i in range(self.particles_num):
+            #print('dot: (%d,%d)  weight: %s'%(self.particles[i].x,self.particles[i].y,self.weights[i]))
+        #pr.disable()
+        #s = io.StringIO()
+        #sortby = SortKey.CUMULATIVE
+        #ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        #ps.print_stats()
+        #print(s.getvalue())
 
     def estimate(self):
         self.state.x = np.sum(np.array([s.x for s in self.particles])*self.weights).astype(int)
@@ -171,7 +183,7 @@ class ParticleFilter():
         self.state.x_dot = np.sum(np.array([s.x_dot for s in self.particles])*self.weights)
         self.state.y_dot = np.sum(np.array([s.y_dot for s in self.particles])*self.weights)
         self.state.a_dot = np.sum(np.array([s.a_dot for s in self.particles])*self.weights)
-        print('img: %s  x: %s  y: %s  h_x: %s  h_y: %s  x_dot: %s  y_dot: %s  a_dot: %s'%(self.img_index+1,self.state.x,self.state.y,self.state.h_x,self.state.h_y,self.state.x_dot,self.state.y_dot,self.state.a_dot))
-        self.state.draw_rectangle(self.img,self.out_path+'/%04d.jpg'%(self.img_index+1))
+        print('img: %s  x: %s  y: %s  h_x: %s  h_y: %s  x_dot: %s  y_dot: %s  a_dot: %s'%(self.img_index,self.state.x,self.state.y,self.state.h_x,self.state.h_y,self.state.x_dot,self.state.y_dot,self.state.a_dot))
+        self.state.draw_rectangle(self.img,self.out_path+'/%04d.jpg'%(self.img_index))
 
 

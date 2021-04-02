@@ -1,10 +1,11 @@
 import cv2
 import os
 
-image_folder = '/home/mdl/azk6085/CSE586/siamFCR/ParticleFilter/data/vot2018/crossing/'
+image_folder = r'./output/'#'/home/mdl/azk6085/CSE586/siamFCR/ParticleFilter/data/vot2018/crossing/'
 video_name = 'video.avi'
 
 images = [img for img in os.listdir(image_folder) if img.endswith(".jpg")]
+images.sort()
 frame = cv2.imread(os.path.join(image_folder, images[0]))
 height, width, layers = frame.shape
 
