@@ -87,7 +87,7 @@ class ParticleFilter():
                 for i in range(math.floor(initial_state.x - initial_state.h_x), math.floor(initial_state.x + initial_state.h_x)):
                     for j in range(math.floor(initial_state.y - initial_state.h_y), math.floor(initial_state.y + initial_state.h_y)):
                         x_val = img_first[j][i][self.q.index(hist_c)]
-                        temp = k(np.linalg.norm((j - initial_state.y, i - initial_state.x)) / a)
+                        temp = 1 #k(np.linalg.norm((j - initial_state.y, i - initial_state.x)) / a)
                         f += temp
                         weight.append(temp)
                         #pdb.set_trace()
@@ -138,7 +138,7 @@ class ParticleFilter():
                             elif m<0:
                                 m=0
                             x_val = img[n][m][self.p.index(hist_c)]
-                            temp = k(np.linalg.norm((m - self.particles[i].x, n - self.particles[i].y)) / a)
+                            temp = 1 #k(np.linalg.norm((m - self.particles[i].x, n - self.particles[i].y)) / a)
                             f += temp
                             x_bin.append(k_delta(hist_c.get_hist_id(x_val) - u))
                             weight.append(temp)

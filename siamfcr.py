@@ -225,7 +225,7 @@ class SiamFCRTracker(Tracker):
 
         self.patch_crop_dcf = np.zeros((self.config_dcf.num_scale, patch_dcf.shape[0], patch_dcf.shape[1], patch_dcf.shape[2]), np.float32)
         ######################################################################
-        initial_state = state(x=box[1],y=box[0],x_dot=0.,y_dot=0.,h_x=box[3]/2.,h_y=box[2]/2.,a_dot=0.)
+        initial_state = state(x=box[1],y=box[0],x_dot=0.,y_dot=0.,h_x=box[3],h_y=box[2],a_dot=0.)
         self.PF.init(image, initial_state) 
         ######################################################################
 
