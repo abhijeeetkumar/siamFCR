@@ -120,7 +120,7 @@ class SiamFCRTracker(Tracker):
             self.optimizer, gamma=self.cfg.lr_decay)
 
 ######Particle filter######## 
-        self.particles_num = 50
+        self.particles_num = 10
         self.PF = ParticleFilter(self.particles_num)
 ####Discrimitative hyperparameter######
         self.theta = 0.6
@@ -225,7 +225,7 @@ class SiamFCRTracker(Tracker):
 
         self.patch_crop_dcf = np.zeros((self.config_dcf.num_scale, patch_dcf.shape[0], patch_dcf.shape[1], patch_dcf.shape[2]), np.float32)
         ######################################################################
-        initial_state = state(x=box[1],y=box[0],x_dot=0.,y_dot=0.,h_x=box[3],h_y=box[2],a_dot=0.)
+        initial_state = state(x=box[1],y=box[0],x_dot=0.,y_dot=0.,h_x=box[2]/2,h_y=box[3]/2,a_dot=0.)
         self.PF.init(image, initial_state) 
         ######################################################################
 
@@ -297,7 +297,7 @@ class SiamFCRTracker(Tracker):
         box2 = np.array([
             PF_state.x,
             PF_state.y,
-            PF_state.h_y, PF_state.h_x])
+            PF_state.h_x, PF_state.h_y])
         ious_FC_PF = self.rect_iou(box1.T, box2.T)            
         if (ious_FC_PF >= self.theta):
             # Using Orignal FC
@@ -330,13 +330,13 @@ class SiamFCRTracker(Tracker):
                     print("2")
             else:
                 if iou_dcf_PF > self.beta2:
-                    x_final = x_dcf
-                    y_final = y_dcf
+                    x_final = x_PF_new
+                    y_final = y_PF_new
                     method = 1
                     print("3")
                 else:
-                    x_final = x_PF_new
-                    y_final = y_PF_new
+                    x_final = x_dcf
+                    y_final = y_dcf
                     method = 2
                     print("4") 
     #############################################################################

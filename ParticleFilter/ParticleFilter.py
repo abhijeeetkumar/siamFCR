@@ -5,6 +5,8 @@ from .utils import *
 import os
 import pdb
 import math
+#import cProfile, pstats, io
+#from pstats import SortKey
 
 class state():
     def __init__(self,x,y,x_dot,y_dot,h_x,h_y,a_dot):
@@ -50,15 +52,15 @@ class hist():
 class ParticleFilter():
     def __init__(self,particles_num=50):
         self.particles_num=particles_num
-        self.DELTA_T=0.05
+        self.DELTA_T=0.2
         self.VELOCITY_DISTURB=4.
-        self.SCALE_DISTURB=0.0
+        self.SCALE_DISTURB=0.001
         self.SCALE_CHANGE_D=0.001
         self.initial_state=state(x=0,y=0,x_dot=0.,y_dot=0.,h_x=25,h_y=40,a_dot=0.) 
         self.state=self.initial_state
         self.particles=[]
         self.weights = [1. / particles_num] * particles_num  
-        self.q = [hist(num=2,max_range=180),hist(num=2,max_range=255),hist(num=10,max_range=255)]
+        self.q = [hist(num=10,max_range=255),hist(num=10,max_range=255),hist(num=10,max_range=255)]
 
     def init(self, image, initial_state):
         self.state = initial_state
@@ -76,7 +78,7 @@ class ParticleFilter():
             self.particles.append(particle)
 
         img_first = image
-        img_first = cv.cvtColor(img_first, cv.COLOR_BGR2HSV)
+        #img_first = cv.cvtColor(img_first, cv.COLOR_BGR2HSV)
 
         for hist_c in self.q:
             for u in range(hist_c.num):
@@ -87,7 +89,7 @@ class ParticleFilter():
                 for i in range(math.floor(initial_state.x - initial_state.h_x), math.floor(initial_state.x + initial_state.h_x)):
                     for j in range(math.floor(initial_state.y - initial_state.h_y), math.floor(initial_state.y + initial_state.h_y)):
                         x_val = img_first[j][i][self.q.index(hist_c)]
-                        temp = 1 #k(np.linalg.norm((j - initial_state.y, i - initial_state.x)) / a)
+                        temp = k(np.linalg.norm((j - initial_state.y, i - initial_state.x)) / a)
                         f += temp
                         weight.append(temp)
                         #pdb.set_trace()
@@ -113,22 +115,24 @@ class ParticleFilter():
             particle.a_dot = particle.a_dot+random_nums[6]*self.SCALE_CHANGE_D
 
     def observe(self, image):
+        #pr = cProfile.Profile()
+        #pr.enable()
         img=image
-        img=cv.cvtColor(img , cv.COLOR_BGR2HSV)
+        #img=cv.cvtColor(img , cv.COLOR_BGR2HSV)
         B=[]
         for i in range(self.particles_num):
             if self.particles[i].x<0 or self.particles[i].x>image.shape[1]-1 or self.particles[i].y<0 or self.particles[i].y>image.shape[0]-1:
                 B.append(0)
                 continue
-            self.p = [hist(num=2, max_range=180), hist(num=2, max_range=255), hist(num=10, max_range=255)]
+            self.p = [hist(num=10, max_range=255), hist(num=10, max_range=255), hist(num=10, max_range=255)]
             for hist_c in self.p:
                 for u in range(hist_c.num):
                     a = np.sqrt(self.particles[i].h_x ** 2 + self.particles[i].h_y ** 2)
                     f = 0
                     weight = []
                     x_bin = []
-                    for m in range(self.particles[i].x - self.particles[i].h_x, self.particles[i].x + self.particles[i].h_x):
-                        for n in range(self.particles[i].y - self.particles[i].h_y, self.particles[i].y + self.particles[i].h_y):
+                    for m in range(math.floor(self.particles[i].x - self.particles[i].h_x), math.floor(self.particles[i].x + self.particles[i].h_x)):
+                        for n in range(math.floor(self.particles[i].y - self.particles[i].h_y), math.floor(self.particles[i].y + self.particles[i].h_y)):
                             if n>=image.shape[0]:
                                 n=image.shape[0]-1
                             elif n<0:
@@ -138,7 +142,7 @@ class ParticleFilter():
                             elif m<0:
                                 m=0
                             x_val = img[n][m][self.p.index(hist_c)]
-                            temp = 1 #k(np.linalg.norm((m - self.particles[i].x, n - self.particles[i].y)) / a)
+                            temp = k(np.linalg.norm((m - self.particles[i].x, n - self.particles[i].y)) / a)
                             f += temp
                             x_bin.append(k_delta(hist_c.get_hist_id(x_val) - u))
                             weight.append(temp)
@@ -150,12 +154,18 @@ class ParticleFilter():
         self.weights/=sum(self.weights)
         #for i in range(self.particles_num):
             #print('dot: (%d,%d)  weight: %s'%(self.particles[i].x,self.particles[i].y,self.weights[i]))
+        '''pr.disable()
+        s = io.StringIO()
+        sortby = SortKey.CUMULATIVE
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        print(s.getvalue())'''
 
     def estimate(self):
-        self.state.x = np.sum(np.array([s.x for s in self.particles])*self.weights).astype(int)
-        self.state.y = np.sum(np.array([s.y for s in self.particles])*self.weights).astype(int)
-        self.state.h_x = np.sum(np.array([s.h_x for s in self.particles])*self.weights).astype(int)
-        self.state.h_y = np.sum(np.array([s.h_y for s in self.particles])*self.weights).astype(int)
+        self.state.x = math.floor(np.sum(np.array([s.x for s in self.particles])*self.weights)) #.astype(int)
+        self.state.y = math.floor(np.sum(np.array([s.y for s in self.particles])*self.weights)) #.astype(int)
+        self.state.h_x = math.floor(np.sum(np.array([s.h_x for s in self.particles])*self.weights)) #.astype(int)
+        self.state.h_y = math.floor(np.sum(np.array([s.h_y for s in self.particles])*self.weights)) #.astype(int)
         self.state.x_dot = np.sum(np.array([s.x_dot for s in self.particles])*self.weights)
         self.state.y_dot = np.sum(np.array([s.y_dot for s in self.particles])*self.weights)
         self.state.a_dot = np.sum(np.array([s.a_dot for s in self.particles])*self.weights)
